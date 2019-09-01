@@ -1,0 +1,676 @@
+\documentclass[journal]{IEEEtran}
+
+\usepackage{booktabs}
+
+\usepackage{amssymb,amsmath,amsfonts,amsbsy,amsthm}
+\usepackage{bm,bbm,url,times}
+\usepackage{mathrsfs}
+\usepackage{latexsym}
+\usepackage{graphicx}
+\usepackage{float,color,xcolor}
+\usepackage{subfig}
+\usepackage{multirow,multicol}
+\usepackage{bbold,url,wrapfig}
+\usepackage{epstopdf}
+%\usepackage{mathtools}
+\usepackage{comment}
+\usepackage{algorithm,algorithmic}
+\newcommand{\indeg}{\text{indeg}}
+\newcommand{\outdeg}{\text{ougdeg}}
+\newcommand{\ignore}[1]{}
+
+
+\newcommand{\N}{{\ensuremath{\,\mathcal N}}}
+\newcommand{\I}{{\ensuremath{\mathcal I}}}
+\newcommand{\diag}{\text{diag}}
+\newcommand{\D}{{\ensuremath{\mathcal D}}}
+
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Rn}{\mathbb{R}^n}
+\newcommand{\sign}{\text{sign}}
+\newcommand{\rank}{rank}
+\newcommand{\diam}{\text{\rm diam}}
+
+\newcommand{\mean}{\text{mean}}
+\newcommand{\E}{{\bf E}}
+\newcommand{\fp}{{\sf fp}}
+\newcommand{\fn}{{\sf fn}}
+\newcommand{\FP}{{\sf \#FP}}
+\newcommand{\FN}{{\sf \#FN}}
+\newcommand{\TP}{{\sf \#TP}}
+\newcommand{\TN}{{\sf \#TN}}
+\newcommand{\Real}{{\mathcal Re}}
+
+\newcommand{\comb}{\textcolor{black}}
+\newcommand{\comr}{\textcolor{black}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+\newtheorem{insight}{Insight}
+\newtheorem{remark}{Remark}
+\newtheorem{RQ}{Research Question}
+
+\begin{document}
+
+
+\title{Data Poisoning Attacks against Time Series Forecasting Models}
+%conditional heteroskedasticity model}
+
+\author{
+}
+
+\maketitle
+
+\begin{abstract}
+
+\end{abstract}
+
+\begin{IEEEkeywords}
+
+\end{IEEEkeywords}
+
+\section{Introduction}\label{sec:in}
+
+While there has been a long line of prior work on data poisoning, they almost all assume that the attackers can manipulate the attack record or training/testing datasets so that the attackers can fool the forecasting model. Such attacking settings are unrealistic for most of the attackers. It is harder when the defender is using time series forecasting model to do the prediction. Because the defender can easily find the tampering. In this paper, the attacker can only control the number of attacks before attacking, they cannot manipulate the historical attacking records.
+
+\subsection{Our contributions}
+
+{\color{purple}
+We make the following contributions in this paper
+\begin{itemize}
+    \item We define the concept of Effectiveness and we give the solutions to find the largest Effectiveness under various conditions.
+    \item We compare the maximum attacking targets with minimum cost for different datasets and models. And analysis the security based on the properties of the data and the formulas of the prediction model.
+\end{itemize}
+}
+
+\section{Problem Statement}\label{sec:ps}
+
+Consider an attacker, Alice, and a defender, Bob. Suppose defender Bob is using a time series prediction model, such as those presented in \cite{XuTIFS2013,XuTIFS2015,xu2018modeling,bakdash2018malware}, to forecast the rate of incoming attacks against his network at a certain time resolution (e.g., hourly or daily). This kind of prediction capabilities are important because it enables proactive defense and early-warning. For example, when Bob predicts that a large volume of attacks are to come, Bob may need to adjust his defense posture by, for example, allocating more computing resources to run intrusion prevention/detection systems.
+
+\subsection{Threat Model}
+
+Alice's goal is to disrupt Bob's prediction, nd therefore Bob's proactive defense and early-warning, capability. This is possible because Alice has the total control on the number of attacks she would wage against Bob and can train the same kinds of prediction models that may be used by Bob. 
+In the simplest case, Alice would not wage any attacks during a past period of time (i.e., she stays completely ``quiet''), and then wage a desired number of attacks during the next time unit. This would disrupt any predictive model because no meaningful attack data (i.e., zero attacks of any kind) that can be used by Bob to train a prediction model. While this scenario may be relevant in some extreme circumstances, it is not interesting even from Alice's standpoint. This is because observing no attacks during a past period of time would alert Bob that some high volume attacks may be waged by the attacker in the near future, which may serve as an effective early-warning signal to Bob so that Bob can still be prepared.
+
+The more interesting and realistic scenario instead would be the following: Suppose Alice had an initial plan to wage a sequence of numbers of attacks during a period of time. However, this sequence of numbers of attacks, which will be observed and therefore used by Bob to train a model to predict the incoming number of attacks. In order to disrupt Bob's prediction capability while not staying ``quiet'' for a period of time, Alice would manipulate the sequence of numbers of attacks as little as possible, which is important because the manipulation incurs cost (e.g., reducing the success of attacks during this period of time). It would be ideal to know what is the minimum cost that must be imposed on Alice in order to disrupt Bob's prediction capability. This intuitive exploration leads to the following formal threat model.
+
+We consider a family of prediction models, denoted by ${\cal F}$, that may be used by Bob for {\em ``rolling window''-based one-step} ahead prediction (i.e., predicting the next attack rate using a model that is trained or fitted from the data observed during the past fixed-length time window). This family of models is characterized by three aspects: (i) the type of the prediction model, such as ARMA vs. FARIMA; (ii) the time window size $w$, namely the period of time corresponding to which data is collected to train a prediction model; and (iii) the order $d$ of the prediction model where $d\leq w$. This leads to the following definition of {\em attack capability}.
+
+\begin{definition}[white-box vs. black-box vs. grey-box attack capability]\label{def:wbg}
+We call Alice a {\em white-box} attacker if she knows the preceding (i)-(iii) about Bob's model; we call Alice a {\em black-box} attacker if she does not know any of the preceding (i)-(iii); we call Alice a grey-box attacker if she knows some of the preceding (i)-(iii).  
+\end{definition}
+
+{\color{purple}In this paper, we will focus on white-box and grey-box attacks; the latter means that Alice knows (i), but may or may not know (ii) and/or (iii).}
+
+%\footnote{need to clarify the threat model is grey-box or white-box} {\color{red}Here I think the threat model is white-box model. First of all, Alice must know the type of the forecasting model, the window size to estimating the model and the order of the model Bob using. Otherwise Alice could not do the adversary attacks. And once Alice knows these things, she can estimate the exact values of parameters of Bob's model. I think it makes senses that Alice knows the type of the forecasting model. But the window size and order usually are the secrets. We may discuss the effects of the three things later.}
+
+%Specifically, when Alice plans the attacks that she will wage during a future period of time with respect to the resolutions, she can manipulate the numbers of attacks during a past period of time, during which Bob would collect the numbers of attacks and then used the collected data to train a forecasting mode. 
+
+Having specified an attacker's {\em attack capability}, we need to define an attacker's {\em attack objective}. Qualitatively, there are two attack objectives: {\em under-forecasting} vs. {\em over-forecasting}, where the former means that Bob's prediction will be smaller than the number of attacks Alice will actually wage and the latter means that Bob's prediction will be greater than the number of attacks Alice will actually wage. 
+Since prediction is often used to guide proactive defense, {\em under-forecasting} will make Bob's defense under-resourced, which is to the advantage of Alice because many network traffic may not be examined promptly. Therefore, we focus on the attack objective of Alice attempts to make Bob under-forecast.
+
+In order to precisely describe the attacks, we introduce the following notations.
+\begin{itemize}
+\item $w$: The time window size used in training or fitting Bob's time series prediction model.
+\item $d$: The order of Bob's time series prediction model.
+\item $x_t$ ($t=0,1,2,\ldots$): The number of attacks that originally planned by Alice at the $t$th time unit.
+%\item $\mathcal{F}$: The attacker's original target
+%\item $\mathcal{A}$: set of all attacker's achievable targets given the FARIMA+GARCH model 
+%\item $\mathcal{F^{\teta}}$: The attacker's optimal target given the FARIMA+GARCH model
+\item $x'_t$ ($t=0,1,2,\ldots$): The number of attacks that are actually waged by Alice at the $t$th time unit so as to disrupt Bob's prediction capability.
+%\item $z_{A,t}$ where $t>w$: The number of attacks predicted by Alice using a time series prediction model trained from Alice's planned sequence of attack rates $x_{t-w},\ldots,x_{t-1}$, which are only known to Alice and therefore $z_t$ is Alice's anticipation on Bob's prediction of $x_t$ should Alice do not attempt to disrupt Bob's prediction capability.\footnote{it seems we do not reallly need $Z_{A,t}$? if so, delete it here and from Figure 1, which actually wrongly says $z_t$}
+\item $z'_{A,t}$ and $z'_{B,t}$ where $t>w$: $z'_{A,t}$ and $z'_{B,t}$ are respectively the attack rate predicted by Alice and Bob using a model trained from the sequence of attack rates $x'_{t-w},\ldots,x'_{t-1}$, which is known to both Alice and Bob. In the white-box attack model, we have  $z'_{A,t}=z'_{B,t}$ because Alice knows Bob's prediction model; in a grey-box attack model, we have  $z'_{A,t}\neq z'_{B,t}$ in general because Alice may know some, but not all, information about Bob's prediction model.
+\item $T$: The length of time series during which Bob uses prediction models to forecast the attack rate.
+%\item $\textbf{B}$: The vector Alice use to wage the original planned number of attacks.\footnote{isn't this $x_t$? why introduce another notation?}
+\item $\gamma$: The parameter indicates Alice's attack effectiveness at a single point in time.
+\item $\mathcal{S}$: The 0-1 attacking status set where $0$ represents failure and $1$ represents success.
+%The coefficient between $z_{B,t}$ and $x_t$
+
+%Given that Alice's prediction may be different from Bob's prediction unless they use exactly the same model and parameters, {\color{purple}we use $z'_{A,t}$ to denote Alice's prediction and $z'_{B,t}$ to denote Bob's prediction.}\footnote{i think we have to make this distinction to make the model crystal clear; revise the attacks using this revised notations correspondingly}
+%The prediction results after adversary data poisoning attacks on $i$th day, or the real prediction results generated by Bob’s forecasting model.
+%\item $h_i$: The historical attack rate that the attacker would poison on $i$th day
+
+%\item $\mathcal{C}(\delta)$: The total cost of the attacker (total change of historical data)
+%\item $\beta_i$:
+%\item $\mathcal{S}$: The vector of attack states
+%\item $\mathcal{H}$: The transfer matrix of the FARIMA+GARCH model
+%\item $\theta_i$: The parameter of the FARIMA+GARCH model 
+%\item $f_j$: The model
+\end{itemize} 
+
+
+\begin{figure}[htbp!]
+\centering
+%\subfloat[?]{\includegraphics[width=.4\textwidth,height=2in]{Picture1.png}}
+%\subfloat[?]{\includegraphics[width=.4\textwidth,height=2in]{dia.png}}
+\includegraphics[width=.48\textwidth,height=2in]{dia.png}
+\caption{Illustration of $x_t$ (Alice's planned attack rate with no attempt to disrupt Bob's prediction capability), $x'_t$ (Alice's actual attack rate with attempt to disrupt Bob's prediction capability), %$z_{A,t}$ (Alice's prediction based on her planned attack rates, namely $x_t$'s), 
+$z'_{A,t}$ (Alice's prediction based on her actual attack rates, namely $x'_t$'s), $z'_{B,t}$ (Bob's prediction based on Alice's actual attack rates, namely $x'_t$'s).}
+\label{fig:goal}
+\end{figure}
+
+Figure \ref{fig:goal} illustrates the relationship between $x_t$, $x'_t$, %$z_{A,t}$, 
+$z'_{A,t}$ and $z'_{B,t}$,
+%In what follows we define several attacks. 
+%\footnote{i revised the notations mentioned above because i think the new one are more succinct; double-check: if you agree, revise the rest while making the model as clear as you can --- see how my revision reads}
+where $z'_{B,t}<x_t$ for any $t>w$ because Alice's attack objective is to make Bob underforecast the attack rate $x_t$. {\color{purple}In this paper, we focus on rolling-window, one-step-ahead prediction via model ${\cal F}_{B,t}$; as such, the attacker correspondingly using rolling-window, one-step-ahead prediction via model ${\cal F}_{A,t}$.}
+%Recall that when Alice does not manipulate her planned attack rate $x_t$ for $t\in [0,T]$, Bob can predict Alice's attack rates by a prediction model {\color{blue}$\mathcal{F}_t$ at time $t>w$}. 
+In order to disrupt Bob's capability in predicting $x_t$ for $t>w$, Alice manipulates her attack rates from $x_t$ to $x'_t$ at least for some $t$'s. 
+
+%In general, as shown in Figure\ref{fig:stra}, there are two kinds of strategies for Alice: manipulate the data to attack one target or multiple targets. In this paper, we only focus on the first strategy. 
+
+%\begin{figure*}[htbp!]
+%\centering
+%\subfloat[]{\includegraphics[width=.4\textwidth,height=1in]{l=1.PNG}}
+%\subfloat[]{\includegraphics[width=.4\textwidth,height=1in]{l=n.PNG}}
+%\caption{Alice's attacking strategies}
+%\label{fig:stra}
+%\end{figure*}
+
+%Here we assume that each poisoned data can only attack one target and Alice could not attack the past target once she has already attack the next one. Figure \ref{fig:wrong} shows the wrong attacking strategies.
+
+%\begin{figure}[htbp!]
+%\centering
+%\subfloat[wrong strategy 1]{\includegraphics[width=.4\textwidth,height=0.8in]{wrong1.PNG}}
+
+%\subfloat[wrong strategy 2]{\includegraphics[width=.4\textwidth,height=0.8in]{wrong2.PNG}}
+%\caption{Alice's attacking strategies}
+%\label{fig:wrong}
+%\end{figure}
+
+
+%\subsubsection{Attacking Strategy}
+
+%{\color{red}for this attack, first describe the intuition, then using the notations introduced above to write a rigorous definition
+
+\newpage
+
+{\color{purple}
+In order to find the best attack strategy, Alice first need to find the exact prediction model Bob using. Alice already know the historical data $x_t$ and the type of the model. Here we first assume Alice know the window size $w$ for training model and the order $d$ of the model, which means white-box. So Alice can estimate Bob's model exactly. We will talk about the gray-box in Section\ref{sec:dis}.
+
+Here we define the effectiveness of Bob's attacks as the distance from her real attack $x'_t$ to Bob's prediction $z'_{B,t}$. In this paper, we first use a threshold $\gamma$ to specify the effectiveness for each attack (success or failure) and then measure the total effectiveness by the total number of targets Alice attacked successfully in time $[w, T]$. In the last Section\ref{sec:dis}, we further discuss how to find the largest effectiveness attacking strategy for Alice without threshold for each attack.}
+
+
+Let us start with the attack against Bob's prediction at time {\color{purple}$t=w$}. Suppose Alice's attack effectiveness is specified by a parameter $\gamma\in (0,1)$ so as to assure, if possible, $z'_{B,w}=\gamma \cdot x_{w}$,
+
+{\color{purple}(There used to be a footnote here: why not $\leq$? Using $=$ or $\leq$ would have huge differences no matter Alice is using the single-target attack strategy ($l=1$) or multiple-targets attack strategy ($l\leq 1$), which both are defined in the next section. 
+
+For the single-target attack strategy, there is only one problem. If the original prediction $z_{B,t}$ based on $x_{t-w}, x_{t-w+1},\dots,x_{t-1}$ is larger than $\gamma \cdot x_{t}$, the only way to make $z'_{B,t}=\gamma \cdot x_{t}$ is to increase $x_{t-w}, x_{t-w+1},\dots,x_{t-1}$, so that $x'_t\geq x_t$. This would make no sense but may happen because we first want to maximum the effectiveness, which is the number of attacked targets.
+
+The multiple-target attack stratgy has the same problem, too. Besides that, sometimes, using $\leq$ would help Alice attack more targets. Because making $z'_{B,t}$ exactly equal to $\gamma \cdot x_{t}$ is harder.
+
+In this paper, I still use $=$ in algorithm solutions and codes. To solve the problem for single-target attack, I have an implicit assumption that $x'_t$ must smaller than or at most equal to $x_t$. For the multiple-targets attack, I also use the assumption but I don't know whether the effectiveness would increasing or not if we change $=$ to $\leq$.
+
+If we want to change the $=$ to $\leq$, it is not hard to accomplish in the algorithm or code. The only thing need to change in algorithm is switch the $=$ to $\leq$ in the constrains in equation 8 and 9. And the changes in code are changing the $lin.l = c(gamma\cdot x2[pointer])$ to $lin.l = c(0)$ in code-single.r and changing the $=$ to $\leq$ in $dir$ vector in code-multiple.r.)}
+
+where $z'_{B,w}$ is predicted by Bob's model $\mathcal{F}_{w}$ trained or fitted from data $x'_0,\ldots,x'_{w-1}$.
+%on the first target at time $t=w+1$ in which Bob aims to predict the attack rate, where $w$ is the time window for training or fitting a prediction model $\mathcal{F}$.
+%$z'_{B,w+1}$. 
+%To be more specific, let us start with the simplest model in which Bob predicts $z'_{B,w+1}$ and 
+%In order for Alice to make $z'_{B,w+1}=\gamma \cdot x_{w+1}$ where parameter $\gamma\in (0,1)$, Alice can respectively manipulate $x_1,\ldots,x_{w}$ into $x'_1,\ldots,x'_{w}$ so as to disrupt the capability of $\mathcal{F}$ in predicting $x_{w+1}$.
+The cost incurred on Alice 
+%for attacking $t=w+1$ 
+is 
+$$
+C_{w}=\sum_{t=0}^{w-1} \left|x_t -x'_t\right|
+$$
+%In the definition of $C_{w+1}$ we do not consider sign of $(x_t -x'_t)$ 
+because deviating from the originally planned $x_t$ may always incur some cost to Alice. 
+%And in the most of time, Alice can always attack her first target at time $t=w+1$ successfully, which means $z'_{B,w+1}=\gamma \cdot x_{w+1}$ because she can manipulate all $x_1,\ldots,x_{w}$ before time $t=w+1$. 
+%{\color{purple}Given the definition of cost, the relationship of cost and the deviated distance between $x_t$ and $x'_t$ are linear.\footnote{this means you are talking about a speicific model, which is not described already however ...} In Order to pay the minimum cost to achieve her goals, Alice would like to wage $x_t$ in $x_1, \dots, x_w$ by the order of their 'influence' to $z'_{B,t}$. The 'influence' is defined by the model $\mathcal{F}$.} 
+%This attack can be achived as follows.  {\color{red}describe the details how this attack is achieved}
+Therefore, the research problem is:
+\begin{eqnarray}
+\label{eq:single-step-objective}
+\min C_{w} ~~\text{subject to}~~ \\ 
+z'_{B,w}=\gamma \cdot x_{w}~\text{and}~
+z'_{B,w}\leftarrow\mathcal{F}_{w}(x'_0,\ldots,x'_{w-1}).
+\end{eqnarray}
+Note that $x'_{w}=x_{w}$.
+
+%Having discussed how Alice would disrupt Bob's prediction of $z'_{B,t}$ for $t=w+1$. 
+Now we discuss how Alice would disrupt Bob's prediction of $z'_{B,t}$ for $t= w+1$. If Alice decide to attack  the situation becomes complicated because the prediction model ${\cal F}_{B,t}$ for $t= w+1$ is based on data $x'_1,\ldots,x'_{t-1}=x'_{w}$, namely $z'_{B,t=w+1}\leftarrow {\cal F}_{B,t}(x'_1,\ldots,x'_{t-1}=x'_{w})$. {\color{purple} or $\mathcal{F}_{w+1}$?}. Note that at this point, Alice has no freedom to manipulate any more because $x'_1,\ldots,x'_{t-2}=x'_{w-1}$ are already observed by Bob and $x_{t=1}=x_{w}$ can not be manipulated otherwise the effectiveness of $z'_{B,w}$ would not be specified by $\gamma$. So Alice can not attack $z'_{B,w+1}$. 
+
+Then we discuss how Alice would disrupt Bob's prediction of $z'_{B,t}$ for $t= w+2$. The prediction model ${\cal F}_{B,t}$ for $t= w+2$ is based on data $x'_{2},\ldots,x'_{t-1}=x'_{w+1}$, namely $z'_{B,t=w+2}\leftarrow {\cal F}_{B,t}(x'_{2},\ldots,x'_{t-1}=x'_{w+1})$. Note that at this point, Alice only has the freedom to manipulate $x'_{t-1}=x'_{w+1}$. Now the research problem becomes:
+
+\begin{eqnarray}
+\label{eq:single-step-objective}
+\min C_{w+2}=\left|x_{w+1}-x'_{w+1}\right| ~~\text{subject to}~~ \\ 
+z'_{B,w+2}=\gamma \cdot x_{w+2}~\text{and}~
+z'_{B,w+2}\leftarrow\mathcal{F}_{w}(x'_2,\ldots,x'_{w+1}).
+\end{eqnarray}
+Note that $x'_{w+2}=x_{w+2}$.
+
+Then for $t=w+3$ Alice can not manipulate any more and for $t=w+4$ Alice can only manipulate $x_{w+3}$ for $z'_{B,w+4}$. {\color{purple}If Alice would continue attacks like this, we say Alice is using the greedy attack strategy: everytime Alice attacking, she always choose the next one target to attack if possible. This is a interger programming problem: in order to discrupt $z'_{B,t}$, for all the $x_t$, $t\in[t-w, t-1]$ that Alice can manipulate, she tries to find the $x'_t$s that satisfy
+\begin{equation}
+\left\{
+             \begin{array}{lr}
+             z'_{B,t}=\mathcal{F}(x'_{t-1}, x'_{t-2}, \dots, x'_{t-w})=\gamma \cdot x_t &  \\
+             0 \leq x'_{t-1}\\
+             0 \leq x'_{t-2}\\
+             \dots          \\
+             0 \leq x'_{t-w}\\
+             x'_{t-1}, x'_{t-2}, \dots, x'_{t-w}\in\mathbb{Z}^{n}
+             \end{array}
+\right.
+\end{equation}
+And the sum of cost is minimum cost.
+}
+
+Assume every time Alice attacks, she succeed, the results {\color{purple}of greedy attack strategy} can be shown using the example described in Table \ref{table:basic}, where $T=7$ and $w=3$.
+
+\begin{table}[!htbp]
+\begin{tabular}{|l|l|l|l|l|l|l|l|}
+\hline
+      & model         & observed data & target         & data poisoning & attack status  \\ \hline
+$t=0$   & $\mathcal{F}_1$   & $x'_0$              & $z'_{B,3}$    & $x_0\to x'_0$   &          \\ \hline
+$t=1$   & $\mathcal{F}_2$   & $x'_0, x'_1$         & $z'_{B,3}$    & $x_1\to x'_1$  &          \\ \hline
+$t=2$   & $\mathcal{F}_3$   & $x'_0, x'_1, x'_2$    & $z'_{B,3}$   & $x_2\to x'_2$  & $\surd$ \\ \hline
+$t=3$   & $\mathcal{F}_4$   & $x'_1, x'_2, x'_3=x_3$ & $z'_{B,4}$   &                & $\times$ \\ \hline
+$t=4$   & $\mathcal{F}_5$   & $x'_2, x'_3, x'_4$    & $z'_{B,5}$   & $x_4\to x'_4$  & $\surd$ \\ \hline
+$t=5$   & $\mathcal{F}_6$   & $x'_3, x'_4, x'_5=x_5$ & $z'_{B,6}$   &              & $\times$  \\ \hline
+$t=6$   & $\mathcal{F}_7$   & $x'_4, x'_5, x'_6$    & $z'_{B,7}$   & $x_6\to x'_6$  & $\surd$ \\ \hline
+\end{tabular}
+\caption{An example with $w=3$ and $T=7$}
+\label{table:basic}
+\end{table}
+
+%Let us define some concepts for Alice's attacking first.
+
+%\begin{definition}[single-target attack or $l=1$]
+%When preparing the next attack, if number of targets is $1$, we say the attack is single-target attack\footnote{we already discussed that we focus on one-step-ahead prediction, so this definition does not make sense}
+%\end{definition}
+
+%{\color{purple}Single-target attack is different with one-step-ahead prediction. Single-target attack is the attacking strategy that each time Alice waged $x_t$, no matter how many, she aims only one target. One-step-ahead prediction is the prediction strategy for Bob.}
+
+%We assume Alice is always using single-target attack. Then we define the modifiable for $x_t$ and attackable for $z_{A,t}$
+
+We notice that, if every attack succeed, which means Alice can make $z'_{B,t}=\gamma \cdot x_t$, the number of targets Alice attacked in $(w,T)$ is $\lfloor \frac{T-w}{2} \rfloor +1$. 
+
+But sometimes when Alice tries to disrupt Bob's prediction of $z'_{B,t}$, she may not achieve her goals. {\color{purple}In another word, greedy strategy may not achieve her largest effectiveness every time. In order to maximizing her effectiveness, before start to attack $[t, T]$, Alice would like to find her best attack strategy with maximum number of targets.} So give $x_t$ and model $\mathcal{F}$, what is the largest number of targets can Alice attack and what is the total cost Alice need to pay?
+
+Here we define the total cost in the period time $(w, T)$ as 
+$$
+C=\sum_{k>0}C_{j}=\sum_{k>0} \left|x_k -x'_k\right|
+$$
+%We notice that the costs for different attacks are independent({\color{purple} need to prove or explanation}). So to find the minimum total cost $C_{min}$, Alice need to find the minimum cost of $C_j$ for each attack.
+
+In order describe the questions better, let us define some concepts for Alice's attacking first.
+
+\begin{definition}[non-manipulable]
+We say $x_t$ is non-manipulable if $x'_t$ has to be equal to $x_t$, {\color{purple}This means at time $t$, Alice has already disrupted Bob's prediction of $z'_{B,t}$ that $z'_{B,t}=\gamma \cdot x_t$.}
+\end{definition}
+
+%We notice that $x_t$ can only be manipulated once, which means $x'_t$ is not modifiable. This is because after attacking, $x'_t$ is already observed by Bob. 
+
+\begin{definition}[Attackable]
+We say $z_{A,t}$ is attackable if given all the manipulable $x_i$ in $(t-w,t-1)$, we can make $z'_{B,t}=\gamma \cdot x_{t}$
+\end{definition}
+
+So to find the best attacking strategy, Alice need to solve two questions following order
+
+\begin{RQ}
+Given the original planned number of attacks $x_0, \dots, x_t$ and prediction model $\mathcal{F}$ with window size $w$, how to find the best attacking plan $\mathcal{S}$ with largest number of attackable targets?
+\end{RQ}
+
+\begin{RQ}
+Given the attacking plan $\mathcal{S}$, how to find the minimum total cost to achieve the plan?
+\end{RQ}
+
+We notice that there may be different $\mathcal{S}$s that have the same largest number of attackable targets. Alice should choose the $\mathcal{S}$ with minimum total cost as the best attacking strategy. And if their minimum costs are also the same, Alice can pick anyone of them.
+
+\section{Solution}\label{sec:sol} 
+
+Here we give the definition of Alice's best attack strategy
+\begin{definition}[Best Attack strategy]
+In order to maximizing her benefits, Alice want to attack as much targets as she can and use minimum total cost to achieve her goals. So the best attack strategy is defined as 
+\begin{equation}
+    max \sum_{t=w+1}^T \mathcal{I}(z'_{B,t}= \gamma \cdot x_t)
+\end{equation}
+with $min \sum_{t=1}^T |x_t - x'_t|$
+\end{definition}
+So before attacking, Alice need to first find the attacking plan $\mathcal{S}$ with maximum targets. If there are more than one plans, Alice would choose the best one with minimum cost.
+
+{\color{purple}
+
+We notice that, when manipulating $x_t$ to $x'_t$, it would not only influence the next $d$ predictions given the forecasting model, but also the next $w$ models with fitting window size $w$. In this paper, we update the model every time we have a new $x'_t$ but we will not consider the impact of the model changing when plan to discrupt $z'_{B,t}$, in another word, when discrupting $z'_{B,t}$, we would only manipulate all the manipulatable $x_i$ in $[t-d,t-1]$. We assume that Alice attacks the targets in $[w, T]$ following order, which means the attacking strategy in Fig\ref{fig:wrong1} is not allowed. 
+
+\begin{figure}[htbp!]
+\centering
+\subfloat[Achievable target]{\includegraphics[width=.5\textwidth]{wrong1.PNG}}
+\caption{Wrong attacking strategy}
+\label{fig:wrong1}
+\end{figure}
+
+According to the number of targets for one-time attack, Alice have two kinds of attacking strategies.
+
+
+\subsection{single-target attack}
+
+\begin{definition}[single-target attack]
+When preparing the next attack, if number of targets is $1$, we say the attack is single-target attack.
+\end{definition}
+Single-target attack as shown in Fig\ref{fig:stra}(a), mean when manipulating $x_t$, though it would influence the next $d$ predictions, Alice only aim to attack one prediction. Based on the definition, the maximum number of targets Alice can attack in $(w,T)$ is $\lfloor \frac{T-w}{2} \rfloor +1$.
+
+\begin{figure}[htbp!]
+\centering
+\subfloat[Single-target]{\includegraphics[width=.5\textwidth]{single-target.PNG}}
+
+\subfloat[Multiple-targets]{\includegraphics[width=.5\textwidth]{multiple-targets.PNG}}
+\caption{Attacking strategies}
+\label{fig:stra}
+\end{figure}
+
+
+\begin{algorithm}
+\caption{Algorithm 1 to find the maximum targets with single-target attack}
+Input:
+$x_t$, $\mathcal{F}$, $\gamma$ \\
+Output: $\mathcal{S}$
+\begin{algorithmic}[1]
+\STATE use the greedy strategy to find the solution as the initial state $\mathcal{S}'$ and the coressponding $x'_t$
+\STATE $\mathcal{S}$ = $\mathcal{S}'$, $y_t$=$x'_t$
+\REPEAT
+	\STATE change the last 1 in $\mathcal{S}'$ to 0, 
+	\STATE change the corresponding $x'_t$ to $x_t$
+    \STATE find new best solution $\mathcal{S}'$ using greedy strategy.
+    \STATE Compare $\mathcal{S}$ and $\mathcal{S}'$ and store the better solution in $\mathcal{S}$
+\UNTIL{the number of leading 0s in $\mathcal{S}'$ are larger than the number of 0s in $\mathcal{S}$}
+\end{algorithmic}
+\end{algorithm}
+
+We notice that the attack for discrupting each target are independent because Alice attack one target once and she can manipulate $x_t$ only one time. So given $\mathcal{S}$, to find $x'_t$s with minimum cost, we can find the $x'_t$s for each targets by order in $\mathcal{S}$. For each $z'_{B,t}$ and all manipulatable $x_i$s, $i\in[t-d,t-1]$, the objective function and constrains are:
+\begin{equation}
+min(C=\sum|x_i-x'_i|)
+\end{equation}
+
+\begin{equation}
+\left\{
+             \begin{array}{lr}
+             z'_{B,t}=\mathcal{F}(x'_{t-1}, x'_{t-2}, \dots, x'_{t-w})=\gamma \cdot x_t &  \\
+             0 \leq x'_{t-1}\\
+             0 \leq x'_{t-2}\\
+             \dots          \\
+             0 \leq x'_{t-d}\\
+             x'_{t-1}, x'_{t-2}, \dots, x'_{t-w}\in\mathbb{Z}^{n}
+             \end{array}
+\right.
+\end{equation}
+We can solve the integer programming problem for each $z'_{B,t}$ to find the $x'_t$ and combine them together.
+
+\subsection{multiple-targets attack}
+
+\begin{definition}[multiple-targets attack]
+When preparing the next attack, if number of targets is larger than or equal to $1$, we say the attack is multiple-targets attack.
+\end{definition}
+
+Single-target attack as shown in Fig\ref{fig:stra}(b), mean when attacking, Alice would consider all the targets in $[w,T]$ together and find the best attack strategy. Based on the definition and our assumption, the maximum number of targets Alice can attack in $(w,T)$ is larger than $\lfloor \frac{T-w}{2} \rfloor +1$ (I can not prove the exact maximum number). It is hard to find the solutions for multiple-target attack directly but we know the effectivness of multiple-target attack is larger than or at least equal to the effectiveness of single-target attack. So we can find the best multiple-targets attack strategy based on the results of single-target attack. Assume the largest number of attackable targets for single-target attack is $m$,
+
+
+\begin{algorithm}
+\caption{Algorithm 2 to find the maximum targets with multiple-targets attack}
+Input:
+$x_t$, $\mathcal{F}$, $\gamma$, $m$\\
+Output: $\mathcal{S}$
+\begin{algorithmic}[2]\label{alg:2}
+\STATE k=m+1
+\REPEAT
+    \STATE list all the permutations of $k$ 1s and $T-w-k+1$ 0s as the possible solutions.
+    \STATE Find the achieveable solutions.
+    \STATE compare the achieveable solutions with cost and store the one with minimum cost.
+\UNTIL{Given $x_t$, $\mathcal{F}$, $\gamma$ and $k$, there is no achieveable solutions}
+\end{algorithmic}
+\end{algorithm}
+
+In Algorithm\ref{alg:2}, a solution is achieveable if it can satisfy
+
+\begin{equation}
+\left\{
+             \begin{array}{lr}
+             z'_{B,1}=\mathcal{F}(x'_{t-1}, x'_{t-2}, \dots, x'_{t-w})=\gamma \cdot x_t &  \\
+             z'_{B,2}=\mathcal{F}(x'_{t-1}, x'_{t-2}, \dots, x'_{t-w})=\gamma \cdot x_t &  \\
+             \dots                                                                         \\
+             z'_{B,n}=\mathcal{F}(x'_{t-1}, x'_{t-2}, \dots, x'_{t-w})=\gamma \cdot x_t &  \\
+             0 \leq x'_1\\
+             0 \leq x'_2\\
+             \dots          \\
+             0 \leq x'_n\\
+             x'_{1}, x'_{2}, \dots, x'_{n}\in\mathbb{Z}^{n}
+             \end{array}
+\right.
+\end{equation}
+
+We notice that we can only use a fixed model when solving multiple-targets attack strategy problem. And we can find the $x'_t$s with minimum cost by adding the objective function
+
+\begin{equation}
+min(C=\sum|x_t-x'_t|)
+\end{equation}
+
+
+}
+\section{Experiments}
+
+{\color{purple}
+
+We investigate the capabilities of an attacker on synthetic datasets with different models. We begin by randomly creating 100 datasets with length $220$ following log-normal distribution $\mathcal{N}(5,2)$ and normal distribution $\mathcal{N}(100,20)$ respectively. We assume Alice know the window size is $200$ and the order of each model is $5$. So Alice can estimate the exact prediction model Bob's using. We notice that for the multiple-targets attack strategy, Alice can not updata the prediction model by time. To make the problem more concise and fair to the two strategies, we use a fixed prediction models without intercept and all the other parameters are larger than $0$. We will dicuss the prediction models with intercept in Section\ref{sec:dis}.
+
+We assume Alice trying to do adversary attack in time period $[201, 220]$.. The effectiveness coefficient $\gamma=0.7$. We compare the effectiveness of two strategies with different datasets and models by the number of attacked targets. We also calculate the minimum costs of each attacking plan. Some models may have the same effectiveness but the cost Alice need to pay is different.
+
+
+\subsection{Experiments When ${\cal F}$ is AR Model}
+Figure\ref{fig:exam}(a) and (b) show one example in the $100$ datasets following normal distribution and lognormal distribution respectively.
+
+\begin{figure*}[htbp!]
+\centering
+\subfloat[norm]{\includegraphics[width=.4\textwidth]{norm_example.png}}
+\subfloat[log-norm]{\includegraphics[width=.4\textwidth]{lognorm_example.png}}
+\caption{Real example of $x_t$, $x'_t$, $z'_{B,t}$ and targets}
+\label{fig:exam}
+\end{figure*}
+
+Figure\ref{fig:targets}(a) and (b) show the differences of the maximum targets Alice can attack or the largest effectiveness Alice can get with different best attacking strategy for the $100$ datasets. For the datsets following normal distribution, we find there are $88$ datasets that multiple-target attack strategy works better than single-target attack strategy. A lot of datasets using single-target attack strategy have almost reached the theoretical maximum effectiveness. For the datasets following lognormal distribution, we find that there are $52$ datasets that multiple-target attack strategy works better than single-target attack strategy. But none of the twos are closed to the theoretical maximum number.
+
+\begin{figure*}[htbp!]
+\centering
+\subfloat[norm]{\includegraphics[width=.4\textwidth]{norm_targets.png}}
+\subfloat[log-norm]{\includegraphics[width=.4\textwidth]{lognorm_targets.png}}
+\caption{Maximum targets}
+\label{fig:targets}
+\end{figure*}
+
+Figure\ref{fig:cost}(a) and (b) show the minimum costs to achieve the effectiveness for the $100$ datasets. For the datasets following normal and lognormal distribution, we see that most of the minimum cost of single-target attack are smaller than mulitiple-targets attack. But there are $10$ datasets: $5, 10, 15, 43, 69, 80, 92, 96, 97, 100$ in normal distribution and $17$ datasets: $2, 4, 6, 10, 18, 28, 29, 49, 59, 65, 70, 78, 83, 85, 86, 90, 97$ in lognormal distribution that the multiple-targets attack has larger effectiveness and smaller costs.
+
+\begin{figure*}[htbp!]
+\centering
+\subfloat[norm]{\includegraphics[width=.4\textwidth]{norm_cost.png}}
+\subfloat[log-norm]{\includegraphics[width=.4\textwidth]{lognorm_cost.png}}
+\caption{Minimum cost}
+\label{fig:cost}
+\end{figure*}
+
+We draw the following insights:
+\begin{itemize}
+	\item Normal vs lognormal distribution: The properties of datas have a great influence on the results and cost of adversary attack. The stationary data, like the datasets following normal distribution in the experiments, is easier for the attacker to get effectiveness than the non-stationary data and attack more targets with multiple-targets attack strategy.
+	\item Effectiveness: With the limit that she can only reduce $x_t$, in order to get the largest effectiveness, no matter using which attack strategy, Alice, would always choose to attack the targets with smaller $x_t$ originally.
+\end{itemize}
+
+
+
+\subsection{Experiments When ${\cal F}$ is GARCH Model}
+\subsection{Experiments When ${\cal F}$ is FARIMA+GARCH Model}
+
+}
+
+\section{Related Work}
+In paper \cite{alfeld2016data}, The author assume the attacker, Alice, know the initial value $x_t$ and the prediction results of Bob, $z'_{B,t}$ so she can estimate the fixed prediction model $\mathcal{F}$ Bob is using. Alice’s objective is to move Bob’s forecasts as close as possible to her desired target $\textbf{k}$, where $\textbf{k}$ have length of $h$.
+
+Assume $\delta=x'_t - x_t$, let the $(h \times 1)$ vector be the last $h$ values of the time series ending at time k, $\vec \theta$ is the parameters of $\mathcal{F}$. We then define the $h \times h$ one-step matrix $S$ and the $h \times d$ matrix $Z$ to zero-pad $\delta$. The augmented forecast
+\begin{equation}
+    z'_{B,t}=S^{h}(x_t+Z\delta)
+\end{equation} 
+
+where
+
+$$
+	S=
+	\left[
+	\begin{array}{cc}
+	0_h& I_{h-1\times h-1} \\ 
+	0_{(h-d-1)\times 1}& \vec \theta^{T}
+	\end{array}
+	\right]
+	$$
+	
+$$
+	Z=
+	\left[
+	\begin{array}{c}
+	0_{(h-d)\times d} \\ 
+	I_{d\times d}
+	\end{array}
+	\right]
+	$$
+
+Alice want to attract the prediction to a specific target. The research question is to find the optimal attack which defined as.
+
+\begin{equation}
+   \delta=\mathop{}_{\delta}^{\text{argmin}}||z'_{B,t}-\textbf{k}||_{l}+||\delta||_{e}, s.t. ||\delta||_{c}\leq\beta
+\end{equation}
+where $||z'_{B,t}-\textbf{k}||_{l}$ defines Alice’s loss function, $||\delta||_{e}$ defines her effort function, and $||\delta||_{c}$ (along with her budget $\beta$) define the feasible region of her attacks.
+
+We note that Alice’s target $\textbf{k}$ may not be achievable given Bob’s autoregressive model. We denote the closest achievable point to Alice’s target $\textbf{k}$ as:
+\begin{equation}
+    \textbf{k}'=\mathop{}_{\hat{\textbf{k}}\in \mathcal{A}^{(\theta)}}^{\text{argmin}}||\hat{\textbf{k}}-\textbf{k}||_{l}
+\end{equation}
+where $\mathcal{A}^{(\theta)}$ denote the set of all acheivable targets for a fixed horizon $h$
+
+The definitions of $||\cdot||_{l}$, $||\cdot||_{e}$, and $||\cdot||_{c}$ are based on real-world attack scenarios. 
+
+{\color{purple}
+paper \cite{alfeld2016data} only consider the effectiveness as the distance between Bob's predictions and Alice's targets. In practice, the attacker would not only consider the defender's predictions but also the comparisions of the real attacks and predictions. For example, if the attacker want the defender's predictions be $0$ in the next period of time, she can make this happen by keeping silence: she would not make any attack. So the real attack and predictions are both $0$. But most of time this would not make any sense.
+
+And the mathematical framework for defining Alice’s optimal attack is only adapted for the AR model in paper \cite{alfeld2016data}. For the nonlinear prediction model, the mathematical framework is not fitted any more.
+}
+%I have read all the papers and some papers citing these papers. None of them has mentioned how to set the target of the attackers related to our research: the prediction of number of attacks.\footnote{good, we are pioneer in this new direction then; it's even better} Most of the papers are talking about the prediction of classification, they compare the accuracy of the prediction before and after data poisoning. The others just randomly choose the target from normal distribution. I would like to set a state 0-1 set $\mathcal{S}$, which I would mention in the next. Then we can define the optimal target and the optimal attack based on the optimal target.
+
+%So in this case, the historical data in Fig \ref{fig:tseries} is fixed, which means the model is fixed and also known for the attackers. The attacker can manipulate the poisoning data. But for the future data, it is not fixed or planned any more. The attack should first find her optimal target and based on the optimal target, she planned the real number of attacks every day in the future.
+
+
+%Let $\tau$ be the threshold indicating the minimum mis-forecasting Alice would impose on Bob, meaning the following: Let $\alpha_{t+j}\in{\cal R}^+$ be the actual number of attacks that Alice plans to wage on day $i+j$, where $1\leq j \leq \ell$, the attack objective is to let Bob's forecasting returns a predicted cyber attack rate at most $\alpha_{t+j} - \tau$ on day $i+j$. 
+%and she want the prediction result $f_j\in\mathcal{F}$, where $i\leq j\leq n$, during this period to be as least smaller than $\alpha_j-\tau$, where $\alpha_j\in\mathcal{A}$ is the real number of attacks during period $[t_{i}, t_{i+n}]$. 
+
+%Alice trying to make this happen by poisoning the data before time $t_{i}$, {meaning that she may have to lower the attack rate up to time $t_i$ while possibly keeping the attack rate as high as possible.}\footnote{thinking about whether this is a good way of modeling and if not, how to model the cost to the attacker; otherwise, the attacker can make all 0 attack, for example} 
+
+%But Alice's target may not be achievable given the prediction model, threshold $\tau$ and the actual number of attack $\alpha_i$. Even if she make all 0 attack before time $t_i$, give Bob is using the rolling algorithm, the forecasting result $\alpha'_{i+1}$,\footnote{$f$ is always used to represent function; do not abuse notations} on day $i+1$, would not be 0.\footnote{but the goal is not to set is to be 0, only to make is smaller than $\tau$, which is naturally achieved when making all history attack rate at 0, right?} 
+    
+%Give Bob is using the rolling algorithm, the forecasted results $\alpha'_j$ in the period $[{t+1}, {t+\ell}]$ may be affected by the the historical attack rate $hi$ and the $\alpha_i$, where $i<j$ (it depends on the order d of the model). We can see the results in Fig \ref{fig:ar1}
+    
+%For example, Alice would like to wage massive attacks during time $[{t+1}, {t+\ell}]$, assume $\alpha_{t+j}$, where $1\leq j \leq \ell$ is the minimum in the set $\{\alpha_i|t\leq i \leq t+j\}$ and $j$ is larger than all the orders $d$ of the FARIMA+GARCH model, it is impossible to make the forecasted result $\alpha'_{t+j}$ less than $\alpha_{t+j}-\tau$. So when setting targets, Alice should not take day $i+j$ into account.
+    
+%Give that, Alice define a state set $\mathcal{S}=\{s_i|s_i\in\{0,1\},1\leq i\leq \ell\}$. $s_i=1$ means Alice can achieve her goal on day $i$ and {\color{blue}$s_i=0$ means Alice can not achieve her goal on day $i$ no matter how based on the poisoning data and value of $s_{i-1}$, $s_{i-2}$, $s_{i-3}$, \dots.} Since $\alpha_i$ is fixed (planned already), $S$ is fixed. So Alice need to find the closest or optimal target (not $\mathcal{S}$ but $\alpha'_i$) for her with the threshold $\tau$.\footnote{this does not address my question/concern}
+    
+%Bob uses the FARIMA+GARCH because of the long-range dependence of the historical attack rate. Data poisoning may change the property of the historical data. Considering Bob may using some detection algorithm to check the change of the data, Alice want to add minimum change to the historical data. 
+    
+
+
+
+
+
+%\noindent{\bf Notations}. We summarize the notations as follows (no conflict):
+%\begin{itemize}
+%\item $\mathcal{P}$: The time-invariant distribution
+%\item $f$: Model, formula or function
+%\item $z_t$: attack rate (for all the time t)
+%\item $h_t$: historical data for estimating the model $f$
+%\item $p_t$: historical data for poisoning (window size)
+%\item $\alpha_t$: future data (fixed)
+%\item $\alpha'_t$: the original prediction results
+%\item $\beta_t$: attacker's target
+%\end{itemize} 
+
+
+%\subsection{Online Data Poisoning Attacks}
+%While there has been a long line of work on data poisoning attacks, they focused almost exclusively on offline learning where the victim machine learner performs batch learning on a training set. Such attacking settings have been criticized of being unrealistic. For example, it may be practically hard for an attacker to modify training data saved on a company’s internal server{(\color{red}This is like our first assumption: there is only one attacker control all the attacks)}. On the other hand, in applications such as product recommendation and e-commerce user-generated data arrives in a streaming fashion. Such applications are particularly susceptible to adversarial attacks because it is easier for the attacker to perform data poisoning from the outside.
+
+%In this paper, there are three agents in the threaten model: the environment, the attacker and the victim. The attacker sits in-between the environment and the victim. The attacker has knowledge of the victim’s update formula $f$, the past data $h_t$ and the poisoning data $p_t$.attacker does not have the clairvoyant knowledge of future data $\alpha_t$. The attacker can perform only one type of action: it can choose to manipulate the data point $p_t$ into a different $p'_t$ with some perturbation costs. The attacker’s goal is to force the victim’s learned model to satisfy certain properties while paying a small perturbation cost.
+
+%The attack lost function can encode a variety of different attack properties considered in the literature such as:
+%\begin{itemize}
+    %\item targeted attack: the goal is to drive the learned model to an attacker-defined target model (move the forecasted results to the attacker's targets)
+    %\item aversion attack: the goal is to drive the learned model away from the “correct” model
+    %\item backdoor attack: the goal is to plant a backdoor into the learned model such that the model predicts correctly for typical test items, but will behave unexpectedly on special examples
+%\end{itemize}
+
+%There are two type optimal control
+%\begin{itemize}
+    %\item An Optimal Control Formulation of Online Data Poisoning Attacks
+    %\item Near-Optimal Attacks via Model Predictive Control (different from other papers)
+%\end{itemize}
+
+{\color{purple}
+\section{Discussion}\label{sec:dis}
+
+\subsection{Prediction Model}
+For the adversary attack, the prediction model matters a lot. First of all, if the attacker can not estimate the exact prediction model with right parameters, which can be caused by the wrong window size or model order, the attacker's effectiveness would hurts. Secondly, the defender can choose a prediction model with large intercept and small or negative coefficients for the past values, which can be possible for some stationary data, or he can use a model with small intercept and larger coefficients.
+
+Recall the definition\ref{def:wbg} in Section\ref{sec:ps}, in this paper, we assume white-box attack capability for Alice. Sometimes in practice, Alice may not have the information of $w$ and $d$, she has to estimate the prediction model with fuzzy informations. So the prediction for Bob, $z'_{B,t}$, and Alice's inferred prediction, $z'_{A,t}$, would not be the same. Alice need to make the most near model and find a way to check her effectiveness.
+
+We also notice that if Bob is using a prediction model with large intercept, Alice can make massive attacks to get large effectiveness in a short period of time. But if Alice is limited only to reduce the original attack plan, larger intercept with small or negative paramters can make the prediction model more security.
+
+\subsection{Effectiveness without threshold}
+
+In Section\ref{sec:ps} and \ref{sec:sol}, we assume a effectiveness threshold $\gamma$ for each attack. If we do not set a threshold but consider the effectiveness of all the attacks as the total distance between $x'_t$ and $z'_{B,t}$, which means Alice can manipulate any $x_t$, the problem would be much complicated. If so, the effectiveness for time $t$ is not determined until time $t$ since at time $t-1$ we only know $z'_{B,t}$ but not $x'_t$. In this section, we only list the effectiveness without threshold for AR model and leave the rest in the future.
+
+Give the AR model $\mathcal{F}_B$ with order $d$
+\begin{equation}
+    z'_{B,t}=\sum_{i=t-d}^{t-1}\alpha_i x'_i
+\end{equation}
+where $\alpha_i$ is the autocorrelation coefficients. 
+
+We notice that $x'_t\leq x_t$, where $t\in[0, T]$, and sometimes $z'_{B,t}\leq x'_t$ unless $x'_t$ strictly increasing (need prove here?). Assume there is no threshold $\gamma$ for each attack, which means all the targets are attackable for Alice. The total effectiveness in time $[w,T]$ is
+
+\begin{equation}
+	E=\sum_{k\leq w} E_{k}=\sum_{k\leq w} (x'_{k}-z'_{B,k})=\sum_{k\leq w} x'_{k}-\sum_{k\leq w} z_{B,k}
+\end{equation}
+
+%Assume the largest autocorrelation coefficient is $\alpha_k$, where $1 \leq k \leq d$, and there are $n$ targets in time $[w+1,T]$. Based on the definition of effectiveness, if $x'_t$ is always larger than $z_{B,t}$, we can draw that
+
+
+And according to the AR model, assume all the $\alpha_i$ are larger than $0$,
+\begin{equation}
+\begin{aligned}
+    E=\sum_{k\leq w} E_{k}&=x'_1 - z'_{B,1} + x'_2 - z'_{B,2} + \dots\\
+                      &=(x'_1 + x'_2 + \dots) - (z'_{B,1} + z'_{B,2} + \dots)\\
+                      &\approx(x'_1 + x'_2 + \dots) - (\alpha_1+\alpha_2+\dots+\alpha_d)(x'_1+x'_2+\dots)\\
+                      &=(1-\alpha_1-\alpha_2-\dots-\alpha_d)(x'_1 + x'_2 + \dots)
+\end{aligned}
+\end{equation}
+
+We notice that the total effectiveness $E$ has a linear correlation with the sum of $x'_t$. If $\sum{\alpha_i}<1$ and there is no limits for Alice that $x'_t$ has to be less than or equal to $x_t$, the best attacking strategy for Alice is increasing $x_t$ as much as she can. If $\sum{\alpha_i}\geq 1$, Alice should decreasing $x_t$ to get her largets effectiveness.
+
+
+}
+%\subsection{Attack Achievability}
+
+%Give the prediction model and the real number of attacks $\mathcal{A}$, assuming there is no limitation on the change of the historical data, we let $A^{\theta}$ denote the set of all achievable targets:
+
+%\begin{equation}
+%    A={} \\farimagarch model
+%\end{equation}
+
+%\begin{figure}[htbp!]
+%\centering
+%\subfloat[Achievable target]{\includegraphics[width=.5\textwidth]{pre+adv.png}}
+%\caption{Fitting method for studying clustered extreme events}
+%\label{fig:model}
+%\end{figure}
+
+%\subsection{optimal attack}
+
+%\subsection{Loss Function}
+
+\bibliographystyle{plain}
+\bibliography{reference}
+
+\end{document}
